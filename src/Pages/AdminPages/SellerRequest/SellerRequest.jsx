@@ -227,7 +227,7 @@ const SellerRequest = () => {
   return (
     <div className="">
       <SectionTitle
-        title={"Seller Request"}
+        title={"Service Request"}
         description={"Track, manage and forecast your customers and orders."}
       />
 

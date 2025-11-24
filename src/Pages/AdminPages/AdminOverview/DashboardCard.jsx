@@ -1,5 +1,6 @@
 import PropTypes from "prop-types";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import useAnalytics from "../../../dashboardHook/useAnalytics";
 
 const MetricCard = ({
   title,
@@ -130,11 +131,17 @@ MetricCard.propTypes = {
 };
 
 const DashboardCard = () => {
+  const {analytics, loading} = useAnalytics()
+  console.log(analytics);
   const totalEarning = [8, 10, 15, 13, 18, 23, 20, 25, 22, 27, 25, 32];
   const totalOrder = [8, 10, 15, 11, 16, 13, 24, 20, 25, 30, 28, 32];
   const totalUser = [8, 10, 15, 11, 16, 13, 24, 20, 25, 30, 28, 32];
 
-
+if(loading){
+  return <div>
+    loading
+  </div>
+}
 
   return (
     <div className="">
@@ -142,7 +149,7 @@ const DashboardCard = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <MetricCard
             title="Total Earning"
-            value="330"
+            value={analytics?.total_earning}
             trend="up"
             trendValue="1"
             trendColor="text-green-600"
@@ -151,7 +158,7 @@ const DashboardCard = () => {
 
           <MetricCard
             title="Total Orders"
-            value= "210"
+            value= {analytics?.order_count}
             trend="up"
             trendValue="10"
             trendColor="text-green-500"
@@ -159,7 +166,7 @@ const DashboardCard = () => {
           />
           <MetricCard
             title="Total Users"
-            value= "440"
+            value= {analytics?.user_count}
             trend="up"
             trendValue="10"
             trendColor="text-green-500"

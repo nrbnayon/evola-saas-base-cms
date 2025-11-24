@@ -1,87 +1,36 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Link } from "react-router-dom";
 import SectionTitle from "../../../components/SectionTitle";
+import useServicesList from "../../../hooks/useServicesList";
 
 const AllService = () => {
+  const {
+    services,
+    loading: servicesLoading,
+    error: servicesError,
+  } = useServicesList([]);
+
+  // Transform fetched services to match table structure
+  const transformedServices = services.map((service) => ({
+    id: service.id,
+    eventName: service.title,
+    date: new Date(service.created_at).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }),
+    location: service.location,
+    seller: service.seller.full_name,
+    service_type: service.category.title,
+    price: `$${parseFloat(service.price).toFixed(2)}`,
+    status: service.status,
+  }));
+
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const itemsPerPage = 10;
 
-  const services = [
-    {
-      id: "ORD-AX93K7",
-      eventName: "Catering",
-      date: "Jan 6, 2025",
-      location: "Overland Park, KS",
-      seller: "Phoenix Baker",
-      service_type: "Regular",
-      price: "$2,000",
-      status: "Active",
-    },
-    {
-      id: "ORD-AX93K7",
-      eventName: "Wedding photography expert in chicago",
-      date: "Jan 6, 2025",
-      location: "Overland Park, KS",
-      seller: "Drew Cano",
-      service_type: "Regular",
-      price: "$3,500",
-      status: "Canceled",
-    },
-    {
-      id: "ORD-AX93K7",
-      eventName: "Dj",
-      date: "Jan 6, 2025",
-      location: "Overland Park, KS",
-      seller: "Phoenix Baker",
-      service_type: "Regular",
-      price: "$1,800",
-      status: "Active",
-    },
-    {
-      id: "ORD-AX93K7",
-      eventName: "Catering",
-      date: "Jan 6, 2025",
-      location: "Overland Park, KS",
-      seller: "Drew Cano",
-      service_type: "Regular",
-      price: "$2,000",
-      status: "Pending",
-    },
-    {
-      id: "ORD-AX93K7",
-      eventName: "Wedding photography expert in chicago",
-      date: "Jan 6, 2025",
-      location: "Overland Park, KS",
-      seller: "Phoenix Baker",
-      service_type: "Regular",
-      price: "$3,500",
-      status: "Active",
-    },
-    {
-      id: "ORD-AX93K7",
-      eventName: "Dj",
-      date: "Jan 6, 2025",
-      location: "Overland Park, KS",
-      seller: "Drew Cano",
-      service_type: "Regular",
-      price: "$1,800",
-      status: "Canceled",
-    },
-    {
-      id: "ORD-AX93K7",
-      eventName: "Catering",
-      date: "Jan 6, 2025",
-      location: "Overland Park, KS",
-      seller: "Phoenix Baker",
-      service_type: "Custom",
-      price: "$2,000",
-      status: "Active",
-    },
-  ];
-
-  const filteredOrders = services.filter(
+  const filteredOrders = transformedServices.filter(
     (order) =>
       order.eventName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.seller.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -196,18 +145,34 @@ const AllService = () => {
     return buttons;
   };
 
+  if (servicesLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-gray-600 text-lg">Loading services...</div>
+      </div>
+    );
+  }
+
+  if (servicesError) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-red-600 text-lg">Error: {servicesError}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="">
       <SectionTitle
-        title={"All Services"}
-        description={"Track, manage and forecast your customers and orders."}
+        title="All Services"
+        description="Track, manage, and forecast your customers and orders."
       />
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
         <div className="p-6">
           <input
             type="text"
-            placeholder="Search"
+            placeholder="Search services..."
             value={searchQuery}
             onChange={handleSearchChange}
             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -223,8 +188,9 @@ const AllService = () => {
                 <th className="py-3 px-4">Date</th>
                 <th className="py-3 px-4">Location</th>
                 <th className="py-3 px-4">Seller</th>
-                <th className="py-3 px-4">Service type</th>
+                <th className="py-3 px-4">Service Type</th>
                 <th className="py-3 px-4">Price</th>
+                <th className="py-3 px-4">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -235,28 +201,31 @@ const AllService = () => {
                     className="border-b border-gray-200 hover:bg-gray-50"
                   >
                     <td className="p-4 text-gray-700">{service.id}</td>
-                    <td className="p-4 text-gray-700">
-                      <Link to={`/admin/order-details/${service.id}`}>
-                        {service.eventName}
-                      </Link>
-                    </td>
+                    <td className="p-4 text-gray-700">{service.eventName}</td>
                     <td className="p-4 text-gray-700">{service.date}</td>
                     <td className="p-4 text-gray-700">{service.location}</td>
                     <td className="p-4 text-gray-700">{service.seller}</td>
                     <td className="p-4 text-gray-700">
                       <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          service.service_type === "Regular"
-                            ? "bg-green-100 text-green-800"
-                            : service.service_type === "Custom"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
+                        className={`px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800`}
                       >
                         {service.service_type}
                       </span>
                     </td>
                     <td className="p-4 text-gray-700">{service.price}</td>
+                    <td className="p-4 text-gray-700">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          service.status === "Approved"
+                            ? "bg-green-100 text-green-800"
+                            : service.status === "Canceled"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {service.status}
+                      </span>
+                    </td>
                   </tr>
                 ))
               ) : (
@@ -265,7 +234,7 @@ const AllService = () => {
                     colSpan="8"
                     className="text-center py-6 text-gray-500 font-medium"
                   >
-                    No product found matching your criteria.
+                    No services found matching your criteria.
                   </td>
                 </tr>
               )}

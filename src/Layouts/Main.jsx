@@ -1,11 +1,11 @@
-import { Outlet, useLocation } from "react-router";
+import { Outlet, useLocation } from "react-router-dom";
 import Navbar from "../Pages/Shared/Navbar";
 import Footer from "../Pages/Shared/Footer";
 import ScrollToTop from "../components/ScrollToTop";
 
 const Main = () => {
   const location = useLocation();
-  const hideFooter = location.pathname === "/conversation";
+  const hideFooter = /^\/conversation(\/|$)/.test(location.pathname);
 
   return (
     <div className="">
@@ -20,4 +20,3 @@ const Main = () => {
 };
 
 export default Main;
-//  className="container mx-auto mt-30 md:mt-15"

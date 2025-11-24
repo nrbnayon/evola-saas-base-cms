@@ -120,6 +120,19 @@ const Hero = () => {
           </div>
         </form>
       </div>
+      <style>{`
+        .relative.min-h-screen::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 400px;
+          background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1));
+          pointer-events: none;
+          z-index: 5;
+        }
+      `}</style>
     </div>
   );
 };

@@ -1,7 +1,10 @@
 import { useForm } from "react-hook-form";
 import { useState, useEffect } from "react";
 import { FaLeftLong } from "react-icons/fa6";
-import signinImage from "../../assets/images/signin.png"; // Reusing the same image as Signup for consistency
+import { useLocation, useNavigate } from "react-router-dom";
+import signinImage from "../../assets/images/signin.png";
+import apiClient from "../../lib/api-client";
+import { setAuthTokens } from "../../lib/cookie-utils";
 
 const OtpVerification = () => {
   const {
@@ -11,8 +14,19 @@ const OtpVerification = () => {
   } = useForm();
   const [timer, setTimer] = useState(60);
   const [resendEnabled, setResendEnabled] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Get user_id from location state
+  const { user_id } = location.state || {};
 
   useEffect(() => {
+    if (!user_id) {
+      // Redirect back to signup if user_id is not available
+      navigate("/signup");
+    }
+
     if (timer > 0) {
       const countdown = setInterval(() => {
         setTimer((prev) => prev - 1);
@@ -21,32 +35,55 @@ const OtpVerification = () => {
     } else {
       setResendEnabled(true);
     }
-  }, [timer]);
+  }, [timer, user_id, navigate]);
 
-  const handleResendOtp = () => {
+  const handleResendOtp = async () => {
     if (resendEnabled) {
-      console.log("Resend OTP triggered");
-      setTimer(60);
-      setResendEnabled(false);
-      // Placeholder for resend OTP API call
+      try {
+        // Assuming you need to call the sign-up API again to resend OTP
+        await apiClient.post("/auth/sign-up", { user_id }); // Adjust payload as needed
+        setTimer(60);
+        setResendEnabled(false);
+        setErrorMessage("");
+      } catch (error) {
+        setErrorMessage("Failed to resend OTP. Please try again.");
+        console.error("Resend OTP failed:", error.response?.data || error.message);
+      }
     }
   };
 
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
     const otp = Object.values(data).join("");
-    console.log("OTP Entered:", otp);
-    // Placeholder for OTP verification API call
-    window.location.href = "/"; // Redirect to dashboard or success page
+    try {
+      const payload = {
+        user_id,
+        verification_code: otp,
+      };
+
+      const response = await apiClient.post("/auth/verify-email", payload);
+
+      if (response.status === 200 || response.status === 201) {
+        console.log(response.data);
+        const { access_token, refresh_token } = response.data; // Assuming API returns tokens
+        setAuthTokens(access_token, refresh_token); // Store tokens in cookies
+        if (response.data.role === "Seller") {
+          navigate("/seller/onboarding");
+        } else {
+          navigate("/"); // Redirect to home
+        }
+      }
+    } catch (error) {
+      setErrorMessage("Invalid OTP. Please try again.");
+      console.error("OTP verification failed:", error.response?.data || error.message);
+    }
   };
 
   return (
     <div className="grid grid-cols-2 min-h-screen bg-base-200">
-      {/* Left Side Image */}
       <div className="col-span-1 bg-blue-500 flex items-center">
         <img src={signinImage} className="object-cover h-full w-full" alt="OTP Verification" />
       </div>
 
-      {/* Right Side Form */}
       <div className="col-span-1 flex items-center justify-center">
         <div className="max-w-xl w-full p-10">
           <h2 className="text-3xl font-semibold text-center mb-4 text-gray-800">
@@ -84,6 +121,11 @@ const OtpVerification = () => {
             {Object.keys(errors).length > 0 && (
               <p className="text-red-500 text-sm text-center">
                 {errors[Object.keys(errors)[0]]?.message || "Please fill all OTP fields correctly"}
+              </p>
+            )}
+            {errorMessage && (
+              <p className="text-red-500 text-sm text-center">
+                {errorMessage}
               </p>
             )}
 

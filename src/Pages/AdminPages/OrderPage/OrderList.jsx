@@ -7,103 +7,52 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import SectionTitle from "../../../components/SectionTitle";
+import useOrderList from "../../../dashboardHook/useAdminOrders";
+import { format } from "date-fns";
 
 const OrderList = () => {
+  const { orderList, loading } = useOrderList();
+  console.log("Order list response:", orderList); // Debug full response
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const itemsPerPage = 5;
 
-  const orders = [
-    {
-      id: "ORD-AX93K7",
-      eventName: "Catering",
-      date: "Jan 6, 2025",
-      location: "Overland Park, KS",
-      seller: "Phoenix Baker",
-      buyer: "Andi Lane",
-      price: "$2,000",
-      status: "Active",
-    },
-    {
-      id: "ORD-AX93K7",
-      eventName: "Wedding photography expert in chicago",
-      date: "Jan 6, 2025",
-      location: "Overland Park, KS",
-      seller: "Drew Cano",
-      buyer: "Kate Morrison",
-      price: "$3,500",
-      status: "Canceled",
-    },
-    {
-      id: "ORD-AX93K7",
-      eventName: "Dj",
-      date: "Jan 6, 2025",
-      location: "Overland Park, KS",
-      seller: "Phoenix Baker",
-      buyer: "Andi Lane",
-      price: "$1,800",
-      status: "Active",
-    },
-    {
-      id: "ORD-AX93K7",
-      eventName: "Catering",
-      date: "Jan 6, 2025",
-      location: "Overland Park, KS",
-      seller: "Drew Cano",
-      buyer: "Kate Morrison",
-      price: "$2,000",
-      status: "Pending",
-    },
-    {
-      id: "ORD-AX93K7",
-      eventName: "Wedding photography expert in chicago",
-      date: "Jan 6, 2025",
-      location: "Overland Park, KS",
-      seller: "Phoenix Baker",
-      buyer: "Andi Lane",
-      price: "$3,500",
-      status: "Active",
-    },
-    {
-      id: "ORD-AX93K7",
-      eventName: "Dj",
-      date: "Jan 6, 2025",
-      location: "Overland Park, KS",
-      seller: "Drew Cano",
-      buyer: "Kate Morrison",
-      price: "$1,800",
-      status: "Canceled",
-    },
-    {
-      id: "ORD-AX93K7",
-      eventName: "Catering",
-      date: "Jan 6, 2025",
-      location: "Overland Park, KS",
-      seller: "Phoenix Baker",
-      buyer: "Andi Lane",
-      price: "$2,000",
-      status: "Active",
-    },
-  ];
+  // Use dynamic data if available, fallback to static if loading or empty
+  const ordersRaw = loading || !orderList || !orderList.orders ? [] : orderList.orders;
 
+  // Map to the required format and format date
+  const orders = ordersRaw.map(order => ({
+    id: order.id, // Use numeric id instead of order_id
+    order_id: order.order_id, // Keep order_id for display
+    eventName: order.event_name,
+    date: format(new Date(order.event_date), 'MMM d, yyyy'),
+    location: order.location,
+    seller: order.seller.full_name, // Adjusted to match response structure
+    buyer: order.buyer.full_name, // Adjusted to match response structure
+    price: `$${order.amount}`,
+    status: order.status,
+  }));
+
+  // Dynamic stats from response
+  const totalOrders = orders.length.toString();
   const stats = [
     {
       title: "Total Orders",
-      value: "220",
+      value: totalOrders,
       change: "40%",
       changeType: "increase",
       comparison: "vs last month",
     },
     {
       title: "Active Orders",
-      value: "316",
+      value: loading ? "0" : orderList.total_active_orders?.toString() || "0",
       change: "20%",
       changeType: "decrease",
       comparison: "vs last month",
     },
     {
       title: "Total Cancel",
-      value: "420",
+      value: loading ? "0" : orderList.total_cancelled_orders?.toString() || "0",
       change: "20%",
       changeType: "decrease",
       comparison: "From last month",
@@ -123,10 +72,8 @@ const OrderList = () => {
   const currentOrders = filteredOrders.slice(startIndex, endIndex);
 
   const handlePageChange = (page) => setCurrentPage(page);
-  const handlePreviousPage = () =>
-    setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
-  const handleNextPage = () =>
-    setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
+  const handlePreviousPage = () => setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
+  const handleNextPage = () => setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
     setCurrentPage(1);
@@ -224,6 +171,10 @@ const OrderList = () => {
     return buttons;
   };
 
+  if (loading) {
+    return <div>Loading orders...</div>;
+  }
+
   return (
     <div className="">
       <SectionTitle
@@ -295,7 +246,7 @@ const OrderList = () => {
                     key={order.id}
                     className="border-b border-gray-200 hover:bg-gray-50"
                   >
-                    <td className="p-4 text-gray-700">{order.id}</td>
+                    <td className="p-4 text-gray-700">{order.order_id}</td>
                     <td className="p-4 text-gray-700">
                       <Link to={`/admin/order-details/${order.id}`}>
                         {order.eventName}
@@ -309,9 +260,9 @@ const OrderList = () => {
                     <td className="p-4">
                       <span
                         className={`px-2 py-1 rounded-full text-xs ${
-                          order.status === "Active"
+                          order.status === "Active" || order.status === "Accepted" || order.status === "Completed"
                             ? "bg-green-100 text-green-800"
-                            : order.status === "Canceled"
+                            : order.status === "Cancelled"
                             ? "bg-red-100 text-red-800"
                             : order.status === "Pending"
                             ? "bg-yellow-100 text-yellow-800"

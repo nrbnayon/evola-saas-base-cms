@@ -1,42 +1,53 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DollarSign, Edit2, Eye, LogOut, Wallet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { removeAuthTokens } from '../../lib/cookie-utils';
+import useMe from '../../hooks/useMe';
+import apiClient from '../../lib/api-client';
+import { toast } from 'react-toastify';
+import Swal from 'sweetalert2';
 
 export default function AccountSettings() {
+  const { user, loading, refetch } = useMe();
+  console.log(user, 'user from useMe');
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('Account Settings');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [editingPhone, setEditingPhone] = useState(false);
   const [editingPassword, setEditingPassword] = useState(false);
-  const [fullName, setFullName] = useState('Daniel Smith');
-  const [phone, setPhone] = useState('+1 25556 5585 99');
+  const [editingImage, setEditingImage] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
   const [passwords, setPasswords] = useState({
     current: '',
     new: '',
     confirm: '',
   });
   const [passwordError, setPasswordError] = useState('');
-  const [notifications, setNotifications] = useState({
-    popup: true,
-    chat: true,
-    updates: false,
-  });
+  // const [notifications, setNotifications] = useState({
+  //   popup: true,
+  //   chat: true,
+  //   updates: false,
+  // });
 
-  const userRole = localStorage.getItem("userRole");
+  // Update fullName, phone, and image preview states when user data changes
+  useEffect(() => {
+    setFullName(user?.full_name || '');
+    setPhone(user?.phone_number || '');
+    setImagePreview(user?.photo || '');
+  }, [user]);
 
-  let menuItems = [
-  'Account Settings',
-  'Notifications',
-  'Privacy & Policy',
-  'Log Out',
-];
+  const userRole = user?.role?.toLowerCase() || localStorage.getItem("userRole");
 
-if (userRole === "buyer") {
-  menuItems.splice(3, 0, 'Payment History'); 
-} else if (userRole === "seller") {
-  menuItems.splice(3, 0, 'Payment & Withdraw');
-}
+  let menuItems = ['Account Settings', 'Privacy & Policy', 'Log Out'];
+  if (userRole === "buyer") {
+    menuItems.splice(2, 0, 'Payment History');
+  } else if (userRole === "seller") {
+    menuItems.splice(2, 0, 'Payment & Withdraw');
+  }
 
   const handleMenuClick = (item) => {
     if (item === 'Log Out') {
@@ -46,12 +57,12 @@ if (userRole === "buyer") {
     }
   };
 
-  const handleToggle = (key) => {
-    setNotifications((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
+  // const handleToggle = (key) => {
+  //   setNotifications((prev) => ({
+  //     ...prev,
+  //     [key]: !prev[key],
+  //   }));
+  // };
 
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
@@ -64,7 +75,109 @@ if (userRole === "buyer") {
     }
   };
 
-  const handlePasswordSave = () => {
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type (only allow images)
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select a valid image file', { position: 'top-end', autoClose: 3000 });
+        return;
+      }
+      // Validate file size (e.g., max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB', { position: 'top-end', autoClose: 3000 });
+        return;
+      }
+      setSelectedImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleImageSave = async () => {
+    if (!selectedImage) {
+      toast.error('Please select an image to upload', { position: 'top-end', autoClose: 3000 });
+      return;
+    }
+    try {
+      const formData = new FormData();
+      formData.append('photo', selectedImage);
+      await apiClient.put('/user/update', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      refetch();
+      Swal.fire({
+        position: "top-end",
+        icon: "success",
+        title: "Profile image updated successfully",
+        showConfirmButton: false,
+        timer: 1500,
+        toast: true,
+      });
+      setEditingImage(false);
+      setSelectedImage(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update image', {
+        position: 'top-end',
+        autoClose: 3000,
+      });
+    }
+  };
+
+  const handleNameSave = async () => {
+    if (!fullName.trim()) {
+      toast.error('Full name is required', { position: 'top-end', autoClose: 3000 });
+      return;
+    }
+    try {
+      await apiClient.put('/user/update', { full_name: fullName });
+      refetch();
+      Swal.fire({
+        position: "top-end",
+        icon: "success",
+        title: "Name updated successfully",
+        showConfirmButton: false,
+        timer: 1500,
+        toast: true,
+      });
+      setEditingName(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update name', {
+        position: 'top-end',
+        autoClose: 3000,
+      });
+    }
+  };
+
+  const handlePhoneSave = async () => {
+    if (!phone.trim()) {
+      toast.error('Phone number is required', { position: 'top-end', autoClose: 3000 });
+      return;
+    }
+    if (!/^\+?\d{10,}$/.test(phone)) {
+      toast.error('Please enter a valid phone number', { position: 'top-end', autoClose: 3000 });
+      return;
+    }
+    try {
+      await apiClient.put('/user/update', { phone_number: phone });
+      refetch();
+      Swal.fire({
+        position: "top-end",
+        icon: "success",
+        title: "Phone number updated successfully",
+        showConfirmButton: false,
+        timer: 1500,
+        toast: true,
+      });
+      setEditingPhone(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update phone number', {
+        position: 'top-end',
+        autoClose: 3000,
+      });
+    }
+  };
+
+  const handlePasswordSave = async () => {
     if (passwords.new !== passwords.confirm) {
       setPasswordError('New password and confirm password must match');
       return;
@@ -73,14 +186,33 @@ if (userRole === "buyer") {
       setPasswordError('All password fields are required');
       return;
     }
-    // Placeholder for password update logic (e.g., API call)
-    console.log('Password updated:', { current: passwords.current, new: passwords.new });
-    setEditingPassword(false);
-    setPasswords({ current: '', new: '', confirm: '' });
-    setPasswordError('');
+    if (passwords.new.length < 8) {
+      setPasswordError('New password must be at least 8 characters long');
+      return;
+    }
+    try {
+      await apiClient.put('/user/update', {
+        current_password: passwords.current,
+        new_password: passwords.new,
+      });
+      Swal.fire({
+        position: "top-end",
+        icon: "success",
+        title: "Password updated successfully",
+        showConfirmButton: false,
+        timer: 1500,
+        toast: true,
+      });
+      setEditingPassword(false);
+      setPasswords({ current: '', new: '', confirm: '' });
+      setPasswordError('');
+    } catch (err) {
+      setPasswordError(err.response?.data?.message || 'Failed to update password');
+    }
   };
 
   const handleLogout = () => {
+    removeAuthTokens();
     localStorage.removeItem("userRole");
     navigate("/signin");
   };
@@ -90,9 +222,72 @@ if (userRole === "buyer") {
       case 'Account Settings':
         return (
           <div className="space-y-8">
+            {/* Profile image section */}
+            {editingImage ? (
+              <div>
+                <h3 className="text-lg font-medium text-gray-800 mb-2">Profile Image</h3>
+                <p className="text-gray-600 text-sm mb-4">Upload a new profile image</p>
+                <div className="space-y-4 shadow-xl p-4 rounded-2xl">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 rounded-full overflow-hidden">
+                      <img
+                        src={imagePreview || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTPyGNr2qL63Sfugk2Z1-KBEwMGOfycBribew&s"}
+                        alt="Profile Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700"
+                    />
+                  </div>
+                  <div className="flex space-x-4">
+                    <button
+                      onClick={() => {
+                        setEditingImage(false);
+                        setSelectedImage(null);
+                        setImagePreview(user?.photo || '');
+                      }}
+                      className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-300"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleImageSave}
+                      className="px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors duration-300"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-800">Profile Image</h3>
+                  <div className="w-16 h-16 rounded-full overflow-hidden mt-2">
+                    <img
+                      src={user?.photo || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTPyGNr2qL63Sfugk2Z1-KBEwMGOfycBribew&s"}
+                      alt={user?.full_name || "User Avatar"}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+                  <button
+                    onClick={() => setEditingImage(true)}
+                    className="flex items-center space-x-1 text-gray-600 hover:text-purple-600 transition-colors duration-300"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    <span>Edit</span>
+                  </button>
+              </div>
+            )}
+
             {/* Your name section */}
             {editingName ? (
-              <div >
+              <div>
                 <h3 className="text-lg font-medium text-gray-800 mb-2">Your name</h3>
                 <p className="text-gray-600 text-sm mb-4">Make sure this matches the name on your gov. ID</p>
                 <div className="space-y-4 shadow-xl p-4 rounded-2xl">
@@ -103,23 +298,23 @@ if (userRole === "buyer") {
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      placeholder="Daniel Pagla"
+                      placeholder="Enter your full name"
                       maxLength={32}
                     />
                     <p className="text-right text-sm text-gray-500 mt-1">Text limit {fullName.length}/32</p>
                   </div>
                   <div className="flex space-x-4">
                     <button
-                      onClick={() => setEditingName(false)}
+                      onClick={() => {
+                        setEditingName(false);
+                        setFullName(user?.full_name || '');
+                      }}
                       className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-300"
                     >
                       Cancel
                     </button>
                     <button
-                      onClick={() => {
-                        console.log('Name updated:', fullName);
-                        setEditingName(false);
-                      }}
+                      onClick={handleNameSave}
                       className="px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors duration-300"
                     >
                       Save
@@ -131,7 +326,7 @@ if (userRole === "buyer") {
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="text-lg font-medium text-gray-800">Your name</h3>
-                  <p className="text-gray-600">{fullName}</p>
+                  <p className="text-gray-600">{user?.full_name || 'Not set'}</p>
                 </div>
                 <button
                   onClick={() => setEditingName(true)}
@@ -161,16 +356,16 @@ if (userRole === "buyer") {
                   </div>
                   <div className="flex space-x-4">
                     <button
-                      onClick={() => setEditingPhone(false)}
+                      onClick={() => {
+                        setEditingPhone(false);
+                        setPhone(user?.phone_number || '');
+                      }}
                       className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-300"
                     >
                       Cancel
                     </button>
                     <button
-                      onClick={() => {
-                        console.log('Phone updated:', phone);
-                        setEditingPhone(false);
-                      }}
+                      onClick={handlePhoneSave}
                       className="px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors duration-300"
                     >
                       Save
@@ -182,7 +377,7 @@ if (userRole === "buyer") {
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="text-lg font-medium text-gray-800">Phone number</h3>
-                  <p className="text-gray-600">{phone}</p>
+                  <p className="text-gray-600">{user?.phone_number || 'Not set'}</p>
                 </div>
                 <button
                   onClick={() => setEditingPhone(true)}
@@ -198,7 +393,7 @@ if (userRole === "buyer") {
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="text-lg font-medium text-gray-800">Email</h3>
-                <p className="text-gray-600">danialpagla556@gmail.com</p>
+                <p className="text-gray-600">{user?.email_address || 'Not set'}</p>
               </div>
               <button
                 className="flex items-center space-x-1 text-gray-600 hover:text-purple-600 transition-colors duration-300"
@@ -288,83 +483,6 @@ if (userRole === "buyer") {
           </div>
         );
 
-      case 'Notifications':
-        return (
-          <div className="space-y-6 bg-gray-50 p-4 rounded-2xl">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-lg font-medium text-gray-800">Pop up notification on desktop</h3>
-              </div>
-              <div className="relative w-12 h-6 cursor-pointer" onClick={() => handleToggle('popup')}>
-                <input
-                  type="checkbox"
-                  checked={notifications.popup}
-                  onChange={() => handleToggle('popup')}
-                  className="sr-only"
-                />
-                <div
-                  className={`w-12 h-6 rounded-full shadow-inner transition-colors duration-300 ease-in-out ${
-                    notifications.popup ? 'bg-purple-500' : 'bg-gray-300'
-                  } hover:bg-opacity-90`}
-                ></div>
-                <div
-                  className={`absolute top-0 left-0 w-6 h-6 bg-white rounded-full shadow transform transition-transform duration-300 ease-in-out ${
-                    notifications.popup ? 'translate-x-6' : 'translate-x-0'
-                  } hover:scale-110`}
-                ></div>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-lg font-medium text-gray-800">Turn on all chat notification</h3>
-              </div>
-              <div className="relative w-12 h-6 cursor-pointer" onClick={() => handleToggle('chat')}>
-                <input
-                  type="checkbox"
-                  checked={notifications.chat}
-                  onChange={() => handleToggle('chat')}
-                  className="sr-only"
-                />
-                <div
-                  className={`w-12 h-6 rounded-full shadow-inner transition-colors duration-300 ease-in-out ${
-                    notifications.chat ? 'bg-purple-500' : 'bg-gray-300'
-                  } hover:bg-opacity-90`}
-                ></div>
-                <div
-                  className={`absolute top-0 left-0 w-6 h-6 bg-white rounded-full shadow transform transition-transform duration-300 ease-in-out ${
-                    notifications.chat ? 'translate-x-6' : 'translate-x-0'
-                  } hover:scale-110`}
-                ></div>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-lg font-medium text-gray-800">Turn on new update notification</h3>
-              </div>
-              <div className="relative w-12 h-6 cursor-pointer" onClick={() => handleToggle('updates')}>
-                <input
-                  type="checkbox"
-                  checked={notifications.updates}
-                  onChange={() => handleToggle('updates')}
-                  className="sr-only"
-                />
-                <div
-                  className={`w-12 h-6 rounded-full shadow-inner transition-colors duration-300 ease-in-out ${
-                    notifications.updates ? 'bg-purple-500' : 'bg-gray-300'
-                  } hover:bg-opacity-90`}
-                ></div>
-                <div
-                  className={`absolute top-0 left-0 w-6 h-6 bg-white rounded-full shadow transform transition-transform duration-300 ease-in-out ${
-                    notifications.updates ? 'translate-x-6' : 'translate-x-0'
-                  } hover:scale-110`}
-                ></div>
-              </div>
-            </div>
-          </div>
-        );
-
       case 'Privacy & Policy':
         return (
           <div className="space-y-8">
@@ -450,21 +568,21 @@ if (userRole === "buyer") {
             </div>
           </div>
         );
-      
+
       case 'Payment & Withdraw':
         return (
           <div className="">
             <div className="bg-white rounded-lg shadow-xl p-4 w-96">
               <div className="mb-4 p-3 rounded-lg bg-gray-100">
                 <div className="flex items-center mb-2 gap-2">
-                  <Wallet/>
+                  <Wallet />
                   <h2 className="text-lg font-semibold">Available Balance</h2>
                 </div>
                 <p className="text-2xl font-bold">$2,788 USD</p>
               </div>
               <div className="mb-6 p-3 rounded-lg bg-gray-100">
                 <div className="flex items-center mb-2 gap-2">
-                  <DollarSign/>
+                  <DollarSign />
                   <h2 className="text-lg font-semibold">Total Income (This Month)</h2>
                 </div>
                 <p className="text-2xl font-bold">$2,788 USD</p>
@@ -481,21 +599,29 @@ if (userRole === "buyer") {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen container mx-auto mt-30 md:mt-15">
-      <div className="px-4 py-8  ">
+    <div className="min-h-screen container mx-auto">
+      <div className="px-4 py-8">
         {/* Header */}
         <div className="flex items-center space-x-4 mb-8">
           <div className="w-16 h-16 rounded-full overflow-hidden">
             <img
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=387&q=80"
-              alt="John D."
+              src={user?.photo || "https://encrypted-tbn0.gstatic.com/images?q=tbn:tbnpng&s"}
+              alt={user?.full_name || "User Avatar"}
               className="w-full h-full object-cover"
             />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">John D.</h1>
-            <p className="text-gray-600">Update your username and manage your account</p>
+            <h1 className="text-2xl font-bold text-gray-800">{user?.full_name || 'User'}</h1>
+            <p className="text-gray-600">{user?.role || 'Unknown Role'}</p>
           </div>
         </div>
 
@@ -544,10 +670,9 @@ if (userRole === "buyer") {
                 Cancel
               </button>
               <button
-              
-                onClick={() => {handleLogout();
+                onClick={() => {
+                  handleLogout();
                   setShowLogoutModal(false);
-                  // Handle logout logic here
                 }}
                 className="flex-1 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors duration-300"
               >

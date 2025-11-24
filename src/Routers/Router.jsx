@@ -8,7 +8,6 @@ import ConversationPage from "../Pages/ConversationPage/ConversationPage";
 import Notification from "../Pages/Notification/Notification";
 import SaveItems from "../Pages/SaveItems/SaveItems";
 import SellerProfile from "../Pages/SellerProfile/SellerProfile";
-import ManageOrder from "../Pages/ManageOrder/ManageOrder";
 import AllServices from "../Pages/AllServices/AllServices";
 import OrderPreview from "../Pages/OrderPage/OrderPreview";
 import PaymentSuccess from "../Pages/OrderPage/PaymentSuccess";
@@ -16,20 +15,32 @@ import ServiceTimeline from "../Pages/OrderPage/ServiceTimeline";
 import AccountSettings from "../Pages/AccountSettings/AccountSettings";
 import OtpVerification from "../Pages/Authentication/OtpVerification";
 import AdminOverview from "../Pages/AdminPages/AdminOverview";
-import BuyerOverview from "../Pages/BuyerPages/BuyerOverview";
-import MyServices from "../Pages/BuyerPages/MyServices";
-import AddServices from "../Pages/BuyerPages/AddServices";
 import Dashboard from "../Layouts/Dashboard";
 import AllUser from "../Pages/AdminPages/AllUser/AllUsers";
 import UserDetail from "../Pages/AdminPages/AllUser/UserDetail";
 import OrderList from "../Pages/AdminPages/OrderPage/OrderList";
 import OrderDetailPage from "../Pages/AdminPages/OrderPage/OrderDetailPage";
 import AllService from "../Pages/AdminPages/Services/AllService";
-import SellerRequest from "../Pages/AdminPages/SellerRequest/SellerRequest";
 import PrivacyPolicyUpload from "../Pages/AdminPages/PrivacyPolicy/PrivacyPolicyUpload";
-import RequestDetails from "../Pages/AdminPages/SellerRequest/RequestDetails";
 import ContentPage from "../Pages/AdminPages/ContentPage/ContentPage";
 import ProfilePage from "../Pages/Authentication/Profile/ProfilePage";
+import Onboarding from "../Pages/Authentication/Onboarding";
+import SellerOverview from "../Pages/SellerPages/SellerOverview";
+import MyServices from "../Pages/SellerPages/MyServices";
+import AddServices from "../Pages/SellerPages/AddServices";
+import ManageOrder from "../Pages/SellerPages/ManageOrder";
+import OrderPage from "../Pages/OrderPage/OrderPage";
+import CategoryProducts from "../Pages/CategoryProducts/CategoryProducts";
+import AdminLogin from "../Pages/Authentication/AdminLogin";
+import ServiceRequest from "../Pages/AdminPages/ServiceRequest/ServiceRequest";
+import RequestDetails from "../Pages/AdminPages/ServiceRequest/RequestDetails";
+import SubscriberList from "../Pages/AdminPages/SubscriberList/SubscriberList";
+import Advertisement from "../Pages/AdminPages/SubscriberList/Advertisement";
+import Categories from "../Pages/AdminPages/Categories/Categories";
+import BoostingPage from "../Pages/SellerPages/BoostingPage";
+import { BoostPaymentSuccessPage } from "../Pages/Payment/BoostPaymentSuccess";
+import { BoostPaymentCancel } from "../Pages/Payment/BoostPaymentCancel";
+import BoostingManage from "../Pages/AdminPages/BoostingManage/BoostingManage";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -38,6 +49,10 @@ const router = createBrowserRouter([
       {
         path: "/",
         element: <Homepage />,
+      },
+      {
+        path: "/category/:slug",
+        element: <CategoryProducts />,
       },
       {
         path: "/serviceDetails/:id",
@@ -56,6 +71,10 @@ const router = createBrowserRouter([
         element: <ConversationPage />,
       },
       {
+        path: "/conversation/:id",
+        element: <ConversationPage />,
+      },
+      {
         path: "/notification",
         element: <Notification />,
       },
@@ -70,11 +89,19 @@ const router = createBrowserRouter([
       },
       {
         path: "/seller-profile",
+        element: <ProfilePage />,
+      },
+      {
+        path: "/seller-profile/:id",
         element: <SellerProfile />,
       },
 
       {
-        path: "/order",
+        path: "/orders",
+        element: <OrderPage />,
+      },
+      {
+        path: "/manage-orders",
         element: <ManageOrder />,
       },
       {
@@ -91,16 +118,31 @@ const router = createBrowserRouter([
       },
       {
         path: "/seller-overview",
-        element: <BuyerOverview />,
+        element: <SellerOverview />,
       },
       {
         path: "/my-services",
         element: <MyServices />,
       },
       {
-        path: "/add-services",
+        path: '/boosting/:id',
+        element: <BoostingPage/>
+      },
+      
+      {
+        path: '/payment-success',
+        element: <BoostPaymentSuccessPage/>
+      },
+      {
+        path: '/payment-cancel',
+        element: <BoostPaymentCancel/>
+      },
+      
+      {
+        path: "/create-service",
         element: <AddServices />,
       },
+
     ],
   },
   {
@@ -109,43 +151,63 @@ const router = createBrowserRouter([
     children: [
       {
         path: "dashboard",
-        element: <AdminOverview/>
+        element: <AdminOverview />,
       },
       {
         path: "user",
-        element: <AllUser/>
+        element: <AllUser />,
       },
       {
-        path: "userDetail/:id",
-        element: <UserDetail/>
+        path: "users/:id",
+        element: <UserDetail />,
+      },
+      {
+        path: "sellers/:id",
+        element: <UserDetail />,
       },
       {
         path: "order",
-        element: <OrderList/>
+        element: <OrderList />,
       },
       {
-        path: "order-details/:id",
-        element: <OrderDetailPage/>
+        path: "order-details/:orderId",
+        element: <OrderDetailPage />,
       },
       {
         path: "service",
-        element: <AllService/>
+        element: <AllService />,
       },
       {
         path: "request",
-        element: <SellerRequest/>
+        element: <ServiceRequest />,
       },
       {
         path: "request-details/:id",
-        element: <RequestDetails/>
+        element: <RequestDetails/>,
+      },
+      {
+        path: "subscribers",
+        element: <SubscriberList />,
+      },
+      {
+        path: "advertisement",
+        element: <Advertisement />,
+      },
+      {
+        path: "categories",
+        element: <Categories />,
       },
       {
         path: "content",
-        element: <ContentPage/>
+        element: <ContentPage />,
+      },
+      {
+        path: "boosting",
+        element: <BoostingManage />,
       },
       {
         path: "add-privacy",
-        element: <PrivacyPolicyUpload/>
+        element: <PrivacyPolicyUpload />,
       },
     ],
   },
@@ -154,12 +216,20 @@ const router = createBrowserRouter([
     element: <SignIn />,
   },
   {
+    path: "/admin-auth",
+    element: <AdminLogin />,
+  },
+  {
     path: "/signup",
     element: <Signup />,
   },
   {
     path: "/otp",
     element: <OtpVerification />,
+  },
+  {
+    path: "/seller/onboarding",
+    element: <Onboarding />,
   },
 ]);
 

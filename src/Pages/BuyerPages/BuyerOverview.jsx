@@ -120,7 +120,7 @@ export default function BuyerOverview() {
   };
 
   return (
-    <div className="min-h-screen container mx-auto mt-30 md:mt-15 p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen container mx-auto">
       <div className="">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
@@ -305,9 +305,6 @@ export default function BuyerOverview() {
                       <div className="text-right">
                         <p className="font-semibold text-gray-800 text-sm sm:text-base">
                           ${service.price}
-                          <span className="text-xs sm:text-sm font-normal text-gray-600">
-                            /hrs
-                          </span>
                         </p>
                       </div>
                     </div>
